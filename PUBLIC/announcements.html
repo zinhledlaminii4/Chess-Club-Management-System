@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Announcements - Chess Club Management System</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1>Chess Club Management System</h1>
+        <p>Announcements</p>
+    </header>
+
+    <nav>
+        <a href="index.html">Dashboard</a>
+        <a href="players.html">Players</a>
+        <a href="coaches.html">Coaches</a>
+        <a href="tournaments.html">Tournaments</a>
+        <a href="classes.html">Classes</a>
+        <a href="announcements.html">Announcements</a>
+    </nav>
+
+    <div class="container">
+        <section class="welcome">
+            <h2>Club Announcements</h2>
+            <p>View important announcements from the chess club.</p>
+        </section>
+
+        <section id="announcementManagement" class="welcome" hidden>
+            <h2 id="announcementFormTitle">Publish Announcement</h2>
+            <form id="announcementForm">
+                <label for="announcementType">Announcement Type</label>
+                <input id="announcementType" required maxlength="100">
+
+                <label for="announcementDate">Date</label>
+                <input id="announcementDate" type="date" required>
+
+                <label for="announcementPoster">Poster / Image Path (optional)</label>
+                <input id="announcementPoster" maxlength="255">
+
+                <label for="announcementDescription">Description</label>
+                <textarea id="announcementDescription" maxlength="500" required></textarea>
+
+                <button id="saveAnnouncement" type="submit">Publish Announcement</button>
+                <button id="cancelAnnouncementEdit" type="button" hidden>Cancel Edit</button>
+                <p id="announcementMessage" role="status"></p>
+            </form>
+        </section>
+
+        <section class="welcome">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Announcement ID</th>
+                        <th>Type</th>
+                        <th>Date</th>
+                        <th>Posted By</th>
+                        <th>Description</th>
+                        <th id="announcementActionsHeading" hidden>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="announcementsTable">
+                    <tr><td colspan="6">Loading announcements...</td></tr>
+                </tbody>
+            </table>
+        </section>
+    </div>
+
+    <footer>
+        <p>Chess Club Management System © 2026</p>
+    </footer>
+
+    <script>
+        const table = document.getElementById('announcementsTable');
+        const form = document.getElementById('announcementForm');
+        const panel = document.getElementById('announcementManagement');
+        const message = document.getElementById('announcementMessage');
+        let activeRole = null;
+        let editingId = null;
+        let announcements = [];
+
+        const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, ch => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;',
+            '"': '&quot;', "'": '&#39;'
+        })[ch]);
+
+        async function api(url, options = {}) {
+            const response = await fetch(url, {
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+                ...options
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.error || 'Request failed.');
+            return data;
+        }
+
+        function resetAnnouncementForm() {
+            editingId = null;
+            form.reset();
+            document.getElementById('announcementFormTitle').textContent = 'Publish Announcement';
+            document.getElementById('saveAnnouncement').textContent = 'Publish Announcement';
+            document.getElementById('cancelAnnouncementEdit').hidden = true;
+            message.textContent = '';
+        }
+
+        function editAnnouncement(item) {
+            editingId = item.ANNOUNCEMENT_ID;
+            document.getElementById('announcementType').value = item.ANNOUNCEMENT_TYPE || '';
+            document.getElementById('announcementDate').value =
+                item.ANNOUNCEMENT_DATE ? String(item.ANNOUNCEMENT_DATE).slice(0, 10) : '';
+            document.getElementById('announcementPoster').value = item.ANNOUNCEMENT_POSTER || '';
+            document.getElementById('announcementDescription').value = item.ANNOUNCEMENT_DESCRIPTION || '';
+            document.getElementById('announcementFormTitle').textContent = 'Edit Announcement';
+            document.getElementById('saveAnnouncement').textContent = 'Save Changes';
+            document.getElementById('cancelAnnouncementEdit').hidden = false;
+            panel.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function loadAnnouncements() {
+            try {
+                const result = await api('/api/announcements');
+                announcements = Array.isArray(result) ? result : [];
+                table.innerHTML = '';
+
+                if (!announcements.length) {
+                    table.innerHTML = '<tr><td colspan="6">No announcements found.</td></tr>';
+                    return;
+                }
+
+                announcements.forEach(item => {
+                    const row = document.createElement('tr');
+                    const date = item.ANNOUNCEMENT_DATE
+                        ? new Date(String(item.ANNOUNCEMENT_DATE).slice(0, 10) + 'T00:00:00')
+                            .toLocaleDateString('en-ZA')
+                        : '';
+                    const admin = [item.FIRST_NAME, item.LAST_NAME].filter(Boolean).join(' ');
+
+                    row.innerHTML = `
+                        <td>${escapeHTML(item.ANNOUNCEMENT_ID)}</td>
+                        <td>${escapeHTML(item.ANNOUNCEMENT_TYPE)}</td>
+                        <td>${escapeHTML(date)}</td>
+                        <td>${escapeHTML(admin)}</td>
+                        <td>${escapeHTML(item.ANNOUNCEMENT_DESCRIPTION)}</td>
+                        <td>${activeRole?.ROLE_NAME === 'IT_ADMIN'
+                            ? `<button type="button" data-edit="${Number(item.ANNOUNCEMENT_ID)}">Edit</button>
+                               <button type="button" data-delete="${Number(item.ANNOUNCEMENT_ID)}">Delete</button>`
+                            : 'View only'}
+                        </td>`;
+                    table.appendChild(row);
+                });
+            } catch (error) {
+                console.error(error);
+                table.innerHTML = '<tr><td colspan="6">Failed to load announcements. Please sign in and try again.</td></tr>';
+            }
+        }
+
+        table.addEventListener('click', async event => {
+            const editId = event.target.dataset.edit;
+            const deleteId = event.target.dataset.delete;
+
+            if (editId) {
+                const item = announcements.find(a =>
+                    Number(a.ANNOUNCEMENT_ID) === Number(editId));
+                if (item) editAnnouncement(item);
+            }
+
+            if (deleteId) {
+                const item = announcements.find(a =>
+                    Number(a.ANNOUNCEMENT_ID) === Number(deleteId));
+                if (!item || !confirm('Delete this announcement? This cannot be undone.')) return;
+
+                try {
+                    await api(`/api/announcements/${deleteId}`, { method: 'DELETE' });
+                    message.textContent = 'Announcement deleted.';
+                    await loadAnnouncements();
+                } catch (error) {
+                    alert(error.message);
+                }
+            }
+        });
+
+        form.addEventListener('submit', async event => {
+            event.preventDefault();
+            message.textContent = '';
+
+            const payload = {
+                announcementType: document.getElementById('announcementType').value.trim(),
+                announcementDate: document.getElementById('announcementDate').value,
+                poster: document.getElementById('announcementPoster').value.trim() || null,
+                description: document.getElementById('announcementDescription').value.trim()
+            };
+
+            try {
+                await api(editingId
+                    ? `/api/announcements/${editingId}`
+                    : '/api/announcements', {
+                    method: editingId ? 'PUT' : 'POST',
+                    body: JSON.stringify(payload)
+                });
+
+                message.textContent = editingId ? 'Announcement updated.' : 'Announcement published.';
+                resetAnnouncementForm();
+                await loadAnnouncements();
+            } catch (error) {
+                message.textContent = error.message;
+            }
+        });
+
+        document.getElementById('cancelAnnouncementEdit')
+            .addEventListener('click', resetAnnouncementForm);
+
+        async function init() {
+            try {
+               const session = await api('/api/auth/me');
+activeRole = session.activeRole || session.user?.activeRole || null;
+
+const isAdmin = activeRole?.ROLE_NAME === 'IT_ADMIN';
+
+panel.hidden = !isAdmin;
+document.getElementById('announcementActionsHeading').hidden = !isAdmin;
+
+if (!isAdmin) {
+    document.getElementById('announcementFormTitle').textContent =
+        'Announcements are view-only';
+}
+            } catch (error) {
+                console.warn('Session details unavailable:', error.message);
+            }
+            await loadAnnouncements();
+        }
+
+        init();
+    </script>
+</body>
+</html>

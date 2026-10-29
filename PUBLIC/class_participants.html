@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Class Participants - Chess Club Management System</title>
+
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+    <header>
+        <h1>Chess Club Management System</h1>
+        <p>Class Participants</p>
+    </header>
+
+    <nav>
+        <a href="index.html">Dashboard</a>
+        <a href="players.html">Players</a>
+        <a href="coaches.html">Coaches</a>
+        <a href="tournaments.html">Tournaments</a>
+        <a href="classes.html">Classes</a>
+        <a href="#">Announcements</a>
+    </nav>
+
+    <div class="container">
+
+        <section class="welcome">
+            <h2>Class Participants</h2>
+
+            <p>
+                View the players registered for each chess class.
+            </p>
+        </section>
+
+        <section class="participants-section">
+
+            <table id="participantsTable">
+
+                <thead>
+                    <tr>
+                        <th>Participant ID</th>
+                        <th>Class ID</th>
+                        <th>Lesson</th>
+                        <th>Player ID</th>
+                        <th>Player Name</th>
+                    </tr>
+                </thead>
+
+                <tbody id="participantsTableBody">
+
+                    <tr>
+                        <td colspan="5">
+                            Loading participants...
+                        </td>
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </section>
+
+    </div>
+
+    <footer>
+        <p>Chess Club Management System © 2026</p>
+    </footer>
+
+
+    <script>
+
+        async function loadParticipants() {
+
+            try {
+
+                const response =
+                    await fetch('/api/class-participants');
+
+                const participants =
+                    await response.json();
+
+                const tableBody =
+                    document.getElementById(
+                        'participantsTableBody'
+                    );
+
+                tableBody.innerHTML = '';
+
+                if (participants.length === 0) {
+
+                    tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="5">
+                                No class participants found.
+                            </td>
+                        </tr>
+                    `;
+
+                    return;
+                }
+
+                participants.forEach(participant => {
+
+                    const row =
+                        document.createElement('tr');
+
+                    row.innerHTML = `
+                        <td>
+                            ${participant.CLASS_PARTICIPANTS_ID}
+                        </td>
+
+                        <td>
+                            ${participant.CLASS_ID}
+                        </td>
+
+                        <td>
+                            ${participant.LESSON_TITLE}
+                        </td>
+
+                        <td>
+                            ${participant.PLAYER_ID}
+                        </td>
+
+                        <td>
+                            ${participant.FIRST_NAME}
+                            ${participant.LAST_NAME}
+                        </td>
+                    `;
+
+                    tableBody.appendChild(row);
+
+                });
+
+            } catch (error) {
+
+                console.error(
+                    'Error loading class participants:',
+                    error
+                );
+
+                document.getElementById(
+                    'participantsTableBody'
+                ).innerHTML = `
+                    <tr>
+                        <td colspan="5">
+                            Failed to load class participants.
+                        </td>
+                    </tr>
+                `;
+
+            }
+
+        }
+
+        loadParticipants();
+
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Coaches - Chess Club Management System</title>
+
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+    <header>
+        <h1>Chess Club Management System</h1>
+        <p>Coaches</p>
+    </header>
+
+    <nav>
+        <a href="index.html">Dashboard</a>
+        <a href="players.html">Players</a>
+        <a href="coaches.html">Coaches</a>
+        <a href="#">Tournaments</a>
+        <a href="#">Classes</a>
+        <a href="#">Announcements</a>
+    </nav>
+
+    <div class="container">
+
+        <section class="welcome">
+            <h2>Registered Coaches</h2>
+
+            <p>
+                View coaches registered with the chess clubs.
+            </p>
+        </section>
+
+        <section class="coaches-section">
+
+            <table id="coachesTable">
+
+                <thead>
+                    <tr>
+                        <th>Coach ID</th>
+                        <th>Person ID</th>
+                        <th>Username</th>
+                        <th>First Name</th>
+                        <th>Last Name</th>
+                        <th>Phone</th>
+                        <th>Chess Club</th>
+                    </tr>
+                </thead>
+
+                <tbody id="coachesTableBody">
+
+                    <tr>
+                        <td colspan="7">
+                            Loading coaches...
+                        </td>
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </section>
+
+    </div>
+
+    <footer>
+        <p>Chess Club Management System © 2026</p>
+    </footer>
+
+
+    <script>
+
+        async function loadCoaches() {
+
+            try {
+
+                const response = await fetch('/api/coaches');
+
+                const coaches = await response.json();
+
+                const tableBody =
+                    document.getElementById('coachesTableBody');
+
+                tableBody.innerHTML = '';
+
+                coaches.forEach(coach => {
+
+                    const row = document.createElement('tr');
+
+                    row.innerHTML = `
+                        <td>${coach.COACH_ID}</td>
+                        <td>${coach.PERSON_ID}</td>
+                        <td>${coach.USERNAME}</td>
+                        <td>${coach.FIRST_NAME}</td>
+                        <td>${coach.LAST_NAME}</td>
+                        <td>${coach.PHONE}</td>
+                        <td>${coach.CC_NAME}</td>
+                    `;
+
+                    tableBody.appendChild(row);
+
+                });
+
+            } catch (error) {
+
+                console.error('Error loading coaches:', error);
+
+                document.getElementById('coachesTableBody').innerHTML = `
+                    <tr>
+                        <td colspan="7">
+                            Failed to load coaches.
+                        </td>
+                    </tr>
+                `;
+
+            }
+
+        }
+
+        loadCoaches();
+
+    </script>
+
+</body>
+
+</html>

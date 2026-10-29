@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coach-Player Assignments - Chess Club Management System</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <header>
+        <h1>Chess Club Management System</h1>
+        <p>Coach-Player Assignments</p>
+    </header>
+
+    <nav>
+        <a href="index.html">Dashboard</a>
+        <a href="players.html">Players</a>
+        <a href="coaches.html">Coaches</a>
+        <a href="tournaments.html">Tournaments</a>
+        <a href="classes.html">Classes</a>
+        <a href="class_participants.html">Participants</a>
+        <a href="announcements.html">Announcements</a>
+        <a href="tournaments-rsvps.html">Tournament RSVPs</a>
+        <a href="club-tournament-entries.html">Club Entries</a>
+        <a href="coach-player-assignments.html">Coach Assignments</a>
+    </nav>
+
+    <div class="container">
+
+        <section class="welcome">
+            <h2>Coach-Player Assignments</h2>
+            <p>View the coaches assigned to players and their assignment status.</p>
+        </section>
+
+        <section class="coach-assignments-section">
+            <table id="coachAssignmentsTable">
+                <thead>
+                    <tr>
+                        <th>Assignment ID</th>
+                        <th>Coach ID</th>
+                        <th>Coach Name</th>
+                        <th>Player ID</th>
+                        <th>Player Name</th>
+                        <th>Registration Date</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="coachAssignmentsTableBody">
+                    <tr>
+                        <td colspan="7">Loading assignments...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+    </div>
+
+    <footer>
+        <p>Chess Club Management System © 2026</p>
+    </footer>
+
+    <script>
+        async function loadAssignments() {
+            const tableBody =
+                document.getElementById('coachAssignmentsTableBody');
+
+            try {
+                const response =
+                    await fetch('/api/coach-player-assignments');
+
+                if (!response.ok) {
+                    throw new Error('Could not load coach-player assignments.');
+                }
+
+                const assignments = await response.json();
+                tableBody.replaceChildren();
+
+                if (assignments.length === 0) {
+                    tableBody.innerHTML =
+                        '<tr><td colspan="7">No assignments found.</td></tr>';
+                    return;
+                }
+
+                const formatDate = value => {
+                    if (!value) return 'Not provided';
+
+                    const date = new Date(value);
+                    return Number.isNaN(date.getTime())
+                        ? value
+                        : date.toLocaleDateString('en-GB', {
+                            timeZone: 'UTC'
+                        });
+                };
+
+                assignments.forEach(assignment => {
+                    const row = document.createElement('tr');
+
+                    const values = [
+                        assignment.ASSIGNMENT_ID,
+                        assignment.COACH_ID,
+                        assignment.COACH_NAME,
+                        assignment.PLAYER_ID,
+                        assignment.PLAYER_NAME,
+                        formatDate(assignment.REGISTRATION_DATE),
+                        assignment.STATUS
+                    ];
+
+                    values.forEach(value => {
+                        const cell = document.createElement('td');
+                        cell.textContent = value ?? 'Not provided';
+                        row.appendChild(cell);
+                    });
+
+                    tableBody.appendChild(row);
+                });
+
+            } catch (error) {
+                console.error('Error loading assignments:', error);
+                tableBody.innerHTML =
+                    '<tr><td colspan="7">Failed to load assignments.</td></tr>';
+            }
+        }
+
+        loadAssignments();
+    </script>
+
+</body>
+</html>

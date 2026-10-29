@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - Chess Club Management System</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1>Chess Club Management System</h1>
+        <p>My Profile</p>
+    </header>
+
+    <nav>
+        <a href="index.html">Dashboard</a>
+        <a href="players.html">Players</a>
+        <a href="coaches.html">Coaches</a>
+        <a href="tournaments.html">Tournaments</a>
+        <a href="classes.html">Classes</a>
+        <a href="announcements.html">Announcements</a>
+        <a href="profile.html">My Profile</a>
+    </nav>
+
+    <div class="container">
+        <section class="welcome">
+            <h2>My Profile</h2>
+            <p>View your personal information and Chess Club account details.</p>
+        </section>
+
+        <section class="card">
+            <h2>Personal Information</h2>
+
+            <div class="table-container">
+                <table>
+                    <tbody id="personalDetails">
+                        <tr><td>Loading profile...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Chess Club Information</h2>
+
+            <div class="table-container">
+                <table>
+                    <tbody id="roleDetails">
+                        <tr><td>Loading account details...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p id="profileMessage" role="status"></p>
+        </section>
+    </div>
+
+    <footer>
+        <p>Chess Club Management System © 2026</p>
+    </footer>
+
+  <script>
+    const personalDetails = document.getElementById('personalDetails');
+    const roleDetails = document.getElementById('roleDetails');
+    const profileMessage = document.getElementById('profileMessage');
+
+    function addRow(table, label, value) {
+        const row = document.createElement('tr');
+        const heading = document.createElement('th');
+        const cell = document.createElement('td');
+
+        heading.textContent = label;
+        cell.textContent =
+            value === null || value === undefined || value === ''
+                ? 'Not provided'
+                : value;
+
+        row.append(heading, cell);
+        table.appendChild(row);
+    }
+
+    async function loadProfile() {
+        try {
+            const response = await fetch('/api/profile', {
+                credentials: 'same-origin'
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    data.message || data.error || 'Could not load your profile.'
+                );
+            }
+
+            const profile = data.profile || {};
+            const activeRole = data.activeRole || {};
+            const details = data.roleDetails || {};
+
+            personalDetails.replaceChildren();
+            roleDetails.replaceChildren();
+
+            addRow(personalDetails, 'Person ID', profile.PERSON_ID);
+            addRow(personalDetails, 'Username', profile.USERNAME);
+            addRow(personalDetails, 'First Name', profile.FIRST_NAME);
+            addRow(personalDetails, 'Last Name', profile.LAST_NAME);
+
+            addRow(
+                personalDetails,
+                'Date of Birth',
+                profile.DOB
+                    ? new Date(profile.DOB).toLocaleDateString()
+                    : null
+            );
+
+            addRow(personalDetails, 'Gender', profile.GENDER);
+            addRow(personalDetails, 'Phone Number', profile.PHONE);
+
+            addRow(roleDetails, 'Active Role', activeRole.ROLE_NAME);
+
+            if (activeRole.ROLE_NAME === 'PLAYER') {
+                addRow(roleDetails, 'Player ID', details.PLAYER_ID);
+                addRow(roleDetails, 'Email', details.EMAIL);
+                addRow(roleDetails, 'Chess Rating', details.RATING);
+            }
+
+            if (activeRole.ROLE_NAME === 'COACH') {
+                addRow(roleDetails, 'Coach ID', details.COACH_ID);
+            }
+
+            if (activeRole.ROLE_NAME === 'ORGANISER') {
+                addRow(roleDetails, 'Organiser ID', details.ORGANISER_ID);
+            }
+
+            if (activeRole.ROLE_NAME === 'IT_ADMIN') {
+                addRow(roleDetails, 'Admin ID', details.ADMIN_ID);
+            }
+
+            const clubId = details.CCID ?? activeRole.CCID;
+            if (clubId != null) {
+                addRow(roleDetails, 'Club ID', clubId);
+            }
+
+            if (details.CC_NAME) {
+                addRow(roleDetails, 'Chess Club', details.CC_NAME);
+            }
+
+            profileMessage.textContent = 'Profile loaded successfully.';
+            profileMessage.style.color = 'green';
+
+        } catch (error) {
+            personalDetails.replaceChildren();
+            roleDetails.replaceChildren();
+
+            personalDetails.innerHTML =
+                '<tr><td>Unable to load profile information.</td></tr>';
+
+            profileMessage.textContent = error.message;
+            profileMessage.style.color = 'red';
+
+            console.error('Loading profile failed:', error);
+        }
+    }
+
+    loadProfile();
+</script>
+
+</body>
+</html>

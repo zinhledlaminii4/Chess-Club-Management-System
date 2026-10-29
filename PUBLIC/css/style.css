@@ -1,0 +1,404 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #f4f6f8;
+    color: #222;
+}
+
+header {
+    background-color: #1f2937;
+    color: white;
+    padding: 25px;
+    text-align: center;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 30px;
+}
+
+header p {
+    margin: 8px 0 0;
+}
+
+nav {
+    background-color: #111827;
+    padding: 15px;
+    text-align: center;
+}
+
+nav a {
+    color: white;
+    text-decoration: none;
+    margin: 0 15px;
+    font-weight: bold;
+}
+
+nav a:hover {
+    color: #fbbf24;
+}
+
+.container {
+    width: 90%;
+    max-width: 1100px;
+    margin: 30px auto;
+}
+
+.welcome {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    margin-bottom: 25px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.card {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.card h2 {
+    margin-top: 0;
+}
+
+.card a {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 10px 18px;
+    background-color: #1f2937;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+}
+
+.card a:hover {
+    background-color: #374151;
+}
+
+footer {
+    text-align: center;
+    padding: 20px;
+    margin-top: 40px;
+    color: #666;
+}
+
+.players-section {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow-x: auto;
+}
+
+#playersTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#playersTable th,
+#playersTable td {
+    padding: 12px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+}
+
+#playersTable th {
+    background-color: #1f2937;
+    color: white;
+}
+
+#playersTable tr:hover {
+    background-color: #f4f6f8;
+}
+
+.coaches-section {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow-x: auto;
+}
+
+#coachesTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#coachesTable th,
+#coachesTable td {
+    padding: 12px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+}
+
+#coachesTable th {
+    background-color: #1f2937;
+    color: white;
+}
+
+#coachesTable tr:hover {
+    background-color: #f4f6f8;
+}
+
+.tournaments-section {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow-x: auto;
+}
+
+#tournamentsTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#tournamentsTable th,
+#tournamentsTable td {
+    padding: 12px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+}
+
+#tournamentsTable th {
+    background-color: #1f2937;
+    color: white;
+}
+
+#tournamentsTable tr:hover {
+    background-color: #f4f6f8;
+}
+
+.classes-section {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow-x: auto;
+}
+
+#classesTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#classesTable th,
+#classesTable td {
+    padding: 12px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+}
+
+#classesTable th {
+    background-color: #1f2937;
+    color: white;
+}
+
+#classesTable tr:hover {
+    background-color: #f4f6f8;
+}
+
+.participants-section {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow-x: auto;
+}
+
+#participantsTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#participantsTable th,
+#participantsTable td {
+    padding: 12px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+}
+
+#participantsTable th {
+    background-color: #1f2937;
+    color: white;
+}
+
+#participantsTable tr:hover {
+    background-color: #f4f6f8;
+}
+
+.announcements-section {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow-x: auto;
+}
+
+#announcementsTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#announcementsTable th,
+#announcementsTable td {
+    padding: 12px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+}
+
+#announcementsTable th {
+    background-color: #1f2937;
+    color: white;
+}
+
+#announcementsTable tr:hover {
+    background-color: #f4f6f8;
+}
+
+.club-entries-section,
+.coach-assignments-section {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow-x: auto;
+}
+
+#clubEntriesTable,
+#coachAssignmentsTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#clubEntriesTable th,
+#clubEntriesTable td,
+#coachAssignmentsTable th,
+#coachAssignmentsTable td {
+    padding: 12px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+}
+
+#clubEntriesTable th,
+#coachAssignmentsTable th {
+    background-color: #1f2937;
+    color: white;
+}
+
+#clubEntriesTable tr:hover,
+#coachAssignmentsTable tr:hover {
+    background-color: #f4f6f8;
+}
+
+@media (max-width: 768px) {
+    nav a {
+        display: inline-block;
+        margin: 8px;
+    }
+
+    .container {
+        width: 94%;
+    }
+
+    .cards {
+        grid-template-columns: 1fr;
+    }
+}
+
+.rsvps-section {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    margin-bottom: 25px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow-x: auto;
+}
+
+#rsvpsTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#rsvpsTable th,
+#rsvpsTable td {
+    padding: 12px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+}
+
+#rsvpsTable th {
+    background-color: #1f2937;
+    color: white;
+}
+
+#rsvpsTable tr:hover {
+    background-color: #f4f6f8;
+}
+
+.matches-section {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow-x: auto;
+}
+
+#matchesTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#matchesTable th,
+#matchesTable td {
+    padding: 12px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+}
+
+#matchesTable th {
+    background-color: #1f2937;
+    color: white;
+}
+
+#matchesTable tr:hover {
+    background-color: #f4f6f8;
+}
+.recent-matches {
+    background: white;
+    padding: 25px;
+    margin-top: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow-x: auto;
+}
+
+#dashboardMatchesTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#dashboardMatchesTable th,
+#dashboardMatchesTable td {
+    padding: 12px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+}
+
+#dashboardMatchesTable th {
+    background-color: #1f2937;
+    color: white;
+}
+
+#dashboardMatchesTable tr:hover {
+    background-color: #f4f6f8;
+}

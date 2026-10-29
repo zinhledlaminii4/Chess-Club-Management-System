@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Club Tournament Entries - Chess Club Management System</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1>Chess Club Management System</h1>
+        <p>Club Tournament Entries</p>
+    </header>
+
+    <nav>
+        <a href="index.html">Dashboard</a>
+        <a href="players.html">Players</a>
+        <a href="coaches.html">Coaches</a>
+        <a href="tournaments.html">Tournaments</a>
+        <a href="classes.html">Classes</a>
+        <a href="class_participants.html">Participants</a>
+        <a href="announcements.html">Announcements</a>
+        <a href="tournament-rsvps.html">Tournament RSVPs</a>
+        <a href="club-tournament-entries.html">Club Entries</a>
+        <a href="coach-player-assignments.html">Coach Assignments</a>
+    </nav>
+
+    <div class="container">
+        <section class="welcome">
+            <h2>Club Tournament Entries</h2>
+            <p>Submit your club's entry for a tournament and view its status.</p>
+        </section>
+
+        <section class="club-entries-section">
+            <h2>Submit a Club Entry</h2>
+
+            <form id="entryForm">
+                <div class="form-group">
+                    <label for="tournamentId">Select Tournament</label>
+                    <select id="tournamentId" name="tournamentId" required>
+                        <option value="">Loading tournaments...</option>
+                    </select>
+                </div>
+
+                <button type="submit" id="submitButton">
+                    Submit Club Entry
+                </button>
+
+                <p id="entryMessage" role="status"></p>
+            </form>
+        </section>
+
+        <section class="club-entries-section">
+            <h2>Submitted Club Entries</h2>
+
+            <div class="table-container">
+                <table id="clubEntriesTable">
+                    <thead>
+                        <tr>
+                            <th>Entry ID</th>
+                            <th>Chess Club</th>
+                            <th>Tournament</th>
+                            <th>Registered By</th>
+                            <th>Entry Date</th>
+                            <th>Status</th>
+                            <th>Decision Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="clubEntriesTableBody">
+                        <tr>
+                            <td colspan="7">Loading entries...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <footer>
+        <p>Chess Club Management System © 2026</p>
+    </footer>
+
+    <script>
+        const entryForm = document.getElementById('entryForm');
+        const tournamentSelect = document.getElementById('tournamentId');
+        const entryMessage = document.getElementById('entryMessage');
+        const submitButton = document.getElementById('submitButton');
+        const tableBody = document.getElementById('clubEntriesTableBody');
+
+        function formatDate(value) {
+            if (!value) return 'Not provided';
+
+            const date = new Date(value);
+
+            return Number.isNaN(date.getTime())
+                ? value
+                : date.toLocaleDateString('en-GB', {
+                    timeZone: 'UTC'
+                });
+        }
+
+        async function loadTournaments() {
+            const response = await fetch('/api/tournaments');
+            const tournaments = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    tournaments.error || 'Could not load tournaments.'
+                );
+            }
+
+            tournamentSelect.replaceChildren();
+
+            const firstOption = document.createElement('option');
+            firstOption.value = '';
+            firstOption.textContent = 'Select a tournament';
+            tournamentSelect.appendChild(firstOption);
+
+            tournaments.forEach(tournament => {
+                const option = document.createElement('option');
+                option.value = tournament.TOURNAMENT_ID;
+                option.textContent =
+                    `${tournament.TOURNAMENT_NAME} — ${formatDate(tournament.TOURNAMENT_DATE)}`;
+                tournamentSelect.appendChild(option);
+            });
+
+            if (tournaments.length === 0) {
+                firstOption.textContent = 'No tournaments available';
+            }
+        }
+
+        async function loadEntries() {
+            try {
+                const response =
+                    await fetch('/api/club-tournament-entries');
+                const entries = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(
+                        entries.error || 'Could not load club entries.'
+                    );
+                }
+
+                tableBody.replaceChildren();
+
+                if (entries.length === 0) {
+                    tableBody.innerHTML =
+                        '<tr><td colspan="7">No entries found.</td></tr>';
+                    return;
+                }
+
+                entries.forEach(entry => {
+                    const row = document.createElement('tr');
+
+                    const registeredBy =
+                        [entry.FIRST_NAME, entry.LAST_NAME]
+                            .filter(Boolean).join(' ') || 'Not provided';
+
+                    [
+                        entry.ENTRY_ID,
+                        entry.CC_NAME,
+                        entry.TOURNAMENT_NAME,
+                        registeredBy,
+                        formatDate(entry.ENTRY_DATE),
+                        entry.STATUS,
+                        formatDate(entry.DECISION_DATE)
+                    ].forEach(value => {
+                        const cell = document.createElement('td');
+                        cell.textContent = value ?? 'Not provided';
+                        row.appendChild(cell);
+                    });
+
+                    tableBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Loading entries failed:', error);
+                tableBody.innerHTML =
+                    '<tr><td colspan="7">Failed to load entries.</td></tr>';
+            }
+        }
+
+        entryForm.addEventListener('submit', async function (event) {
+            event.preventDefault();
+
+            entryMessage.textContent = '';
+            submitButton.disabled = true;
+            submitButton.textContent = 'Submitting...';
+
+            try {
+                const response = await fetch('/api/club-tournament-entries', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        tournamentId: tournamentSelect.value
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(
+                        result.error || 'Could not submit the club entry.'
+                    );
+                }
+
+                entryMessage.textContent =
+                    result.message || 'Club entry submitted successfully!';
+                entryMessage.style.color = 'green';
+
+                entryForm.reset();
+                await loadEntries();
+
+            } catch (error) {
+                entryMessage.textContent = error.message;
+                entryMessage.style.color = 'red';
+                console.error('Submitting club entry failed:', error);
+
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Submit Club Entry';
+            }
+        });
+
+        async function initializePage() {
+            try {
+                await Promise.all([
+                    loadTournaments(),
+                    loadEntries()
+                ]);
+            } catch (error) {
+                console.error('Page initialization failed:', error);
+                entryMessage.textContent =
+                    'Could not load the page data. Check the server and refresh.';
+                entryMessage.style.color = 'red';
+            }
+        }
+
+        initializePage();
+    </script>
+</body>
+</html>

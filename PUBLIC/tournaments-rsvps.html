@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tournament RSVPs | Chess Club</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1>Tournament RSVPs</h1>
+        <p>View player tournament attendance registrations</p>
+    </header>
+
+   <nav>
+    <a href="index.html">Dashboard</a>
+    <a href="players.html">Players</a>
+    <a href="coaches.html">Coaches</a>
+    <a href="tournaments.html">Tournaments</a>
+    <a href="classes.html">Classes</a>
+    <a href="class_participants.html">Participants</a>
+    <a href="announcements.html">Announcements</a>
+    <a href="tournament-rsvps.html">Tournament RSVPs</a>
+    <a href="club-tournament-entries.html">Club Entries</a>
+    <a href="coach-player-assignments.html">Coach Assignments</a>
+   </nav>
+
+<div class="container">
+    <section class="welcome">
+        <h2>Tournament RSVPs</h2>
+        <p>View player tournament attendance registrations.</p>
+        <p id="message">Loading tournament RSVPs...</p>
+    </section>
+
+    <section id="rsvpFormSection" class="welcome" hidden>
+    <h2>Submit Your Tournament RSVP</h2>
+
+    <form id="rsvpForm">
+        <label for="tournamentSelect">Tournament</label>
+        <select id="tournamentSelect" required>
+            <option value="">Loading tournaments...</option>
+        </select>
+
+        <label for="attendanceStatus">Will you attend?</label>
+        <select id="attendanceStatus" required>
+            <option value="">Choose your response</option>
+            <option value="ATTENDING">Attending</option>
+            <option value="NOT ATTENDING">Not attending</option>
+        </select>
+
+        <button type="submit">Submit RSVP</button>
+        <p id="rsvpFormMessage" role="status"></p>
+    </form>
+</section>
+
+    <section class="rsvps-section">
+        <table id="rsvpsTable">
+            <thead>
+                <tr>
+                    <th>RSVP ID</th>
+                    <th>Tournament</th>
+                    <th>Date</th>
+                    <th>Player ID</th>
+                    <th>Player Name</th>
+                    <th>Attendance Status</th>
+                </tr>
+            </thead>
+            <tbody id="rsvpTable"></tbody>
+        </table>
+    </section>
+    </div>
+
+    <script> const table = document.getElementById('rsvpTable');
+const message = document.getElementById('message');
+const rsvpForm = document.getElementById('rsvpForm');
+const rsvpFormSection = document.getElementById('rsvpFormSection');
+const rsvpFormMessage = document.getElementById('rsvpFormMessage');
+const tournamentSelect = document.getElementById('tournamentSelect');
+
+async function api(url, options = {}) {
+    const response = await fetch(url, {
+        credentials: 'same-origin',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...(options.headers || {})
+        }
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+        throw new Error(
+            data.error || data.message || 'Request failed.'
+        );
+    }
+
+    return data;
+}
+
+async function loadTournaments() {
+    const tournaments = await api(
+        '/api/tournament-rsvps/available-tournaments'
+    );
+
+    tournamentSelect.replaceChildren();
+
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Choose a tournament';
+    tournamentSelect.appendChild(placeholder);
+
+    tournaments.forEach(tournament => {
+        const option = document.createElement('option');
+        option.value = tournament.TOURNAMENT_ID;
+
+        const date = tournament.TOURNAMENT_DATE
+            ? String(tournament.TOURNAMENT_DATE).slice(0, 10)
+            : 'Date not provided';
+
+        option.textContent =
+            `${tournament.TOURNAMENT_NAME || 'Unnamed tournament'} — ${date}`;
+
+        tournamentSelect.appendChild(option);
+    });
+
+    if (tournaments.length === 0) {
+        placeholder.textContent = 'No tournaments available';
+    }
+}
+
+async function loadRSVPs() {
+    try {
+        const records = await api('/api/tournament-rsvps');
+
+        table.replaceChildren();
+
+        if (records.length === 0) {
+            message.textContent = 'No tournament RSVP records found yet.';
+            const row = document.createElement('tr');
+            const cell = document.createElement('td');
+            cell.colSpan = 6;
+            cell.textContent = 'No RSVPs have been submitted yet.';
+            row.appendChild(cell);
+            table.appendChild(row);
+            return;
+        }
+
+        message.textContent = `${records.length} RSVP record(s) found.`;
+
+        records.forEach(record => {
+            const row = document.createElement('tr');
+
+            const date = record.TOURNAMENT_DATE
+                ? new Date(
+                    String(record.TOURNAMENT_DATE).slice(0, 10) + 'T00:00:00'
+                ).toLocaleDateString('en-ZA')
+                : 'Not provided';
+
+            const values = [
+                record.RSVP_ID,
+                record.TOURNAMENT_NAME,
+                date,
+                record.PLAYER_ID,
+                `${record.FIRST_NAME || ''} ${record.LAST_NAME || ''}`.trim(),
+                record.ATTENDANCE_STATUS
+            ];
+
+            values.forEach(value => {
+                const cell = document.createElement('td');
+                cell.textContent = value ?? 'Not provided';
+                row.appendChild(cell);
+            });
+
+            table.appendChild(row);
+        });
+    } catch (error) {
+        console.error('Loading RSVPs failed:', error);
+        message.textContent = error.message;
+    }
+}
+
+rsvpForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    rsvpFormMessage.textContent = 'Submitting RSVP...';
+
+    const payload = {
+        tournamentId: tournamentSelect.value,
+        attendanceStatus: document.getElementById('attendanceStatus').value
+    };
+
+    try {
+        const result = await api('/api/tournament-rsvps', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+
+        rsvpFormMessage.textContent =
+            result.message || 'Your RSVP has been saved.';
+
+        await loadRSVPs();
+    } catch (error) {
+        rsvpFormMessage.textContent = error.message;
+    }
+});
+
+async function init() {
+    try {
+        const session = await api('/api/auth/me');
+        const user = session.user || {};
+        const role = session.activeRole || user.activeRole || null;
+
+        if (role?.ROLE_NAME === 'PLAYER') {
+            rsvpFormSection.hidden = false;
+            await loadTournaments();
+        } else {
+            rsvpFormSection.hidden = true;
+        }
+
+        await loadRSVPs();
+    } catch (error) {
+        message.textContent =
+            'Please sign in and select your appropriate role to continue.';
+        console.error(error);
+    }
+}
+
+init();
+ </script>
+</body>
+</html>

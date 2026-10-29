@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Classes - Chess Club Management System</title>
+
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+    <header>
+        <h1>Chess Club Management System</h1>
+        <p>Chess Classes</p>
+    </header>
+
+    <nav>
+        <a href="index.html">Dashboard</a>
+        <a href="players.html">Players</a>
+        <a href="coaches.html">Coaches</a>
+        <a href="tournaments.html">Tournaments</a>
+        <a href="classes.html">Classes</a>
+        <a href="class_participants.html">Participants</a>
+        <a href="#">Announcements</a>
+        <a href="#">Announcements</a>
+    </nav>
+
+    <div class="container">
+
+        <section class="welcome">
+            <h2>Chess Classes</h2>
+
+            <p>
+                View chess lessons and the coaches responsible for them.
+            </p>
+        </section>
+
+        <section class="classes-section">
+
+            <table id="classesTable">
+
+                <thead>
+                    <tr>
+                        <th>Class ID</th>
+                        <th>Coach ID</th>
+                        <th>Lesson Title</th>
+                        <th>Description</th>
+                        <th>Class Level</th>
+                        <th>Coach</th>
+                    </tr>
+                </thead>
+
+                <tbody id="classesTableBody">
+
+                    <tr>
+                        <td colspan="6">
+                            Loading classes...
+                        </td>
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </section>
+
+    </div>
+
+    <footer>
+        <p>Chess Club Management System © 2026</p>
+    </footer>
+
+
+    <script>
+
+        async function loadClasses() {
+
+            try {
+
+                const response = await fetch('/api/classes');
+
+                const classes = await response.json();
+
+                const tableBody =
+                    document.getElementById('classesTableBody');
+
+                tableBody.innerHTML = '';
+
+                if (classes.length === 0) {
+
+                    tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="6">
+                                No classes found.
+                            </td>
+                        </tr>
+                    `;
+
+                    return;
+                }
+
+                classes.forEach(chessClass => {
+
+                    const row = document.createElement('tr');
+
+                    row.innerHTML = `
+                        <td>${chessClass.CLASS_ID}</td>
+                        <td>${chessClass.COACH_ID}</td>
+                        <td>${chessClass.LESSON_TITLE}</td>
+                        <td>${chessClass.LESSON_DESCRIPTION}</td>
+                        <td>${chessClass.CLASS_LEVEL}</td>
+                        <td>
+                            ${chessClass.FIRST_NAME}
+                            ${chessClass.LAST_NAME}
+                        </td>
+                    `;
+
+                    tableBody.appendChild(row);
+
+                });
+
+            } catch (error) {
+
+                console.error('Error loading classes:', error);
+
+                document.getElementById('classesTableBody').innerHTML = `
+                    <tr>
+                        <td colspan="6">
+                            Failed to load classes.
+                        </td>
+                    </tr>
+                `;
+
+            }
+
+        }
+
+        loadClasses();
+
+    </script>
+
+</body>
+
+</html>

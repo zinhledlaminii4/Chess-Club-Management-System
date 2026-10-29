@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Chess Club</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            font-family: Arial, sans-serif;
+            background: #f3f5f9;
+            color: #202938;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 420px;
+            padding: 36px;
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.08);
+        }
+
+        .brand {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .brand-icon {
+            font-size: 42px;
+            margin-bottom: 12px;
+        }
+
+        h1 {
+            margin: 0 0 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #687386;
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input {
+            width: 100%;
+            padding: 13px 14px;
+            border: 1px solid #d5dbe5;
+            border-radius: 8px;
+            font-size: 16px;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: #244a83;
+            box-shadow: 0 0 0 3px rgba(36, 74, 131, 0.12);
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            background: #244a83;
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #193761;
+        }
+
+        button:disabled {
+            opacity: 0.65;
+            cursor: wait;
+        }
+
+        .message {
+            display: none;
+            padding: 12px;
+            margin-bottom: 18px;
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .message.error {
+            display: block;
+            color: #9b1c1c;
+            background: #fff0f0;
+        }
+
+        .message.success {
+            display: block;
+            color: #17633a;
+            background: #eaf8ef;
+        }
+
+        .role-option {
+            display: block;
+            width: 100%;
+            margin-top: 10px;
+            background: #edf2fa;
+            color: #244a83;
+            text-align: left;
+        }
+
+        .role-option:hover {
+            background: #dce7f7;
+        }
+
+        .footer {
+            margin-top: 24px;
+            text-align: center;
+            font-size: 12px;
+            color: #7a8494;
+        }
+
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 26px 22px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="login-container">
+        <header class="brand">
+            <div class="brand-icon" aria-hidden="true">♟</div>
+            <h1>Chess Club</h1>
+            <p class="subtitle">
+                Welcome back! Sign in to access your account.
+            </p>
+        </header>
+
+        <div id="message" class="message" role="status"
+             aria-live="polite"></div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    placeholder="Enter your username"
+                    autocomplete="username"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    placeholder="Enter your password"
+                    autocomplete="current-password"
+                    required
+                >
+            </div>
+
+            <button type="submit" id="loginButton">Log In</button>
+        </form>
+
+        <section id="roleSection" hidden>
+            <h2>Select your role</h2>
+            <p class="subtitle">
+                Your account has multiple roles. Choose how you want to
+                continue.
+            </p>
+            <div id="roleOptions"></div>
+        </section>
+
+        <footer class="footer">
+            Chess Club Management System
+        </footer>
+    </main>
+
+ <script>
+    const form = document.getElementById('loginForm');
+    const message = document.getElementById('message');
+    const loginButton = document.getElementById('loginButton');
+    const roleSection = document.getElementById('roleSection');
+    const roleOptions = document.getElementById('roleOptions');
+
+    const roleNames = {
+        PLAYER: 'Player',
+        COACH: 'Coach',
+        ORGANISER: 'Organizer',
+        IT_ADMIN: 'IT Administrator'
+    };
+
+    function showMessage(text, type) {
+        message.textContent = text;
+        message.className = 'message ' + type;
+    }
+
+    async function selectRole(role) {
+        showMessage('Activating your selected role...', 'success');
+
+        try {
+            const response = await fetch('/api/auth/select-role', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                    roleName: role.ROLE_NAME,
+                    roleId: Number(role.ROLE_ID)
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    data.error || 'Could not activate this role.'
+                );
+            }
+
+            showMessage('Role selected successfully. Redirecting...', 'success');
+
+            // The server-side session determines the active role.
+            // The query parameter is only informational.
+            window.location.href =
+                '/index.html?role=' +
+                encodeURIComponent(role.ROLE_NAME);
+
+        } catch (error) {
+            showMessage(error.message, 'error');
+        }
+    }
+
+    form.addEventListener('submit', async function (event) {
+        event.preventDefault();
+
+        loginButton.disabled = true;
+        loginButton.textContent = 'Signing in...';
+        message.className = 'message';
+        roleSection.hidden = true;
+        roleOptions.replaceChildren();
+
+        const username =
+            document.getElementById('username').value.trim();
+        const password =
+            document.getElementById('password').value;
+
+        try {
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    data.error || 'Unable to sign in.'
+                );
+            }
+
+            const roles = data.user.roles || [];
+
+            if (roles.length === 0) {
+                throw new Error(
+                    'No application role is assigned to this account.'
+                );
+            }
+
+            form.hidden = true;
+
+            if (roles.length === 1) {
+                await selectRole(roles[0]);
+                return;
+            }
+
+            showMessage(
+                'Welcome, ' + data.user.username +
+                '! Choose the role you want to use.',
+                'success'
+            );
+
+            roleSection.hidden = false;
+
+            roles.forEach(function (role) {
+                const button = document.createElement('button');
+
+                button.type = 'button';
+                button.className = 'role-option';
+                button.textContent =
+                    roleNames[role.ROLE_NAME] || role.ROLE_NAME;
+
+                button.addEventListener('click', function () {
+                    roleOptions.querySelectorAll('button').forEach(
+                        option => option.disabled = true
+                    );
+
+                    selectRole(role).catch(error => {
+                        showMessage(error.message, 'error');
+                    }).finally(() => {
+                        roleOptions.querySelectorAll('button').forEach(
+                            option => option.disabled = false
+                        );
+                    });
+                });
+
+                roleOptions.appendChild(button);
+            });
+
+        } catch (error) {
+            showMessage(error.message, 'error');
+            form.hidden = false;
+        } finally {
+            loginButton.disabled = false;
+            loginButton.textContent = 'Log In';
+        }
+    });
+</script>
+</body>
+</html>

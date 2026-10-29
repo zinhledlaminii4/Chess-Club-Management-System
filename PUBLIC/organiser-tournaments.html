@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Manage Tournaments</title>
+    <link rel="stylesheet" href="css/style.css">
+
+    <style>
+        .actions-cell {
+            min-width: 170px;
+            white-space: nowrap;
+        }
+
+        .actions-cell .action-button {
+            display: inline-block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            margin: 4px;
+            padding: 8px 12px;
+            border: 1px solid #333;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .edit-button {
+            background-color: #e5e7eb !important;
+            color: #111827 !important;
+        }
+
+        .delete-button {
+            background-color: #b91c1c !important;
+            color: #ffffff !important;
+            border-color: #991b1b !important;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        #message, #listMessage {
+            overflow-wrap: anywhere;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Chess Club Management System</h1>
+        <p>Organiser Tournament Management</p>
+        <nav>
+            <a href="organiser-dashboard.html">Dashboard</a>
+            <a href="organiser-entries.html">Club Entries</a>
+            <a href="tournaments.html">Tournament List</a>
+        </nav>
+    </header>
+
+    <main class="container">
+        <section class="card">
+            <h2 id="formTitle">Create an Upcoming Tournament</h2>
+            <p id="message" role="status" aria-live="polite"></p>
+
+            <form id="tournamentForm">
+                <div class="form-group">
+                    <label for="tournamentName">Tournament Name *</label>
+                    <input id="tournamentName" name="tournamentName"
+                           required maxlength="150">
+                </div>
+
+                <div class="form-group">
+                    <label for="tournamentDate">Tournament Date and Time *</label>
+                    <input id="tournamentDate" name="tournamentDate"
+                           type="datetime-local" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="locationId">Location *</label>
+                    <select id="locationId" name="locationId" required>
+                        <option value="">Select location</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="ageGroupId">Age Group *</label>
+                    <select id="ageGroupId" name="ageGroupId" required>
+                        <option value="">Select age group</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="affiliationId">Affiliation</label>
+                    <select id="affiliationId" name="affiliationId">
+                        <option value="">None selected</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="entryFee">Entry Fee *</label>
+                    <input id="entryFee" name="entryFee"
+                           type="number" min="0" step="0.01" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea id="description" name="description"
+                              rows="4"></textarea>
+                </div>
+
+                <button type="submit" id="submitButton">
+                    Create Tournament
+                </button>
+
+                <button type="button" id="cancelEditButton"
+                        style="display: none;">
+                    Cancel Edit
+                </button>
+            </form>
+        </section>
+
+        <section class="card">
+            <h2>Existing Tournaments</h2>
+            <p id="listMessage" role="status" aria-live="polite">
+                Loading tournaments...
+            </p>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Date</th>
+                            <th>Location</th>
+                            <th>Age Group</th>
+                            <th>Entry Fee</th>
+                            <th>Description</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tournamentTableBody"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>Chess Club Management System &copy; 2026</p>
+    </footer>
+
+    <script>
+        const form = document.getElementById('tournamentForm');
+        const message = document.getElementById('message');
+        const listMessage = document.getElementById('listMessage');
+        const tableBody = document.getElementById('tournamentTableBody');
+        const formTitle = document.getElementById('formTitle');
+        const submitButton = document.getElementById('submitButton');
+        const cancelEditButton = document.getElementById('cancelEditButton');
+
+        let editingTournamentId = null;
+        let tournaments = [];
+
+        async function apiRequest(url, options = {}) {
+            const response = await fetch(url, {
+                credentials: 'same-origin',
+                ...options,
+                headers: {
+                    ...(options.body
+                        ? { 'Content-Type': 'application/json' }
+                        : {}),
+                    ...options.headers
+                }
+            });
+
+            const result = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                throw new Error(
+                    result.error ||
+                    result.message ||
+                    'The request failed.'
+                );
+            }
+
+            return result;
+        }
+
+        function fillSelect(id, items, valueKey, labelKey, placeholderText) {
+            const select = document.getElementById(id);
+            select.replaceChildren();
+
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = placeholderText;
+            select.appendChild(placeholder);
+
+            items.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item[valueKey];
+                option.textContent = item[labelKey];
+                select.appendChild(option);
+            });
+        }
+
+        async function loadOptions() {
+            const data = await apiRequest(
+                '/api/organiser/tournament-options'
+            );
+
+            fillSelect(
+                'locationId',
+                data.locations || [],
+                'LOCATION_ID',
+                'TOWN_NAME',
+                'Select location'
+            );
+
+            fillSelect(
+                'ageGroupId',
+                data.ageGroups || [],
+                'AGE_GROUP_ID',
+                'AGE_GROUP_NAME',
+                'Select age group'
+            );
+
+            fillSelect(
+                'affiliationId',
+                data.affiliations || [],
+                'AFFILIATION_ID',
+                'AFFILIATION_NAME',
+                'None selected'
+            );
+        }
+
+        function displayDate(value) {
+            if (!value) return '—';
+
+            const date = new Date(value);
+
+            return Number.isNaN(date.getTime())
+                ? String(value)
+                : date.toLocaleString();
+        }
+
+        function formatDateForInput(value) {
+            if (!value) return '';
+
+            const date = new Date(value);
+
+            if (Number.isNaN(date.getTime())) return '';
+
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+
+            return `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
+
+        function addCell(row, value) {
+            const cell = document.createElement('td');
+
+            cell.textContent =
+                value === null || value === undefined || value === ''
+                    ? '—'
+                    : String(value);
+
+            row.appendChild(cell);
+            return cell;
+        }
+
+        function createActionButton(label, className, action) {
+            const button = document.createElement('button');
+
+            button.type = 'button';
+            button.textContent = label;
+            button.className = 'action-button ' + className;
+            button.style.display = 'inline-block';
+            button.style.visibility = 'visible';
+            button.style.opacity = '1';
+
+            button.addEventListener('click', action);
+
+            return button;
+        }
+
+        async function loadTournaments() {
+            listMessage.textContent = 'Loading tournaments...';
+            tableBody.replaceChildren();
+
+            try {
+                const data = await apiRequest('/api/tournaments');
+
+                tournaments = Array.isArray(data) ? data : [];
+
+                if (tournaments.length === 0) {
+                    listMessage.textContent =
+                        'No tournaments have been created yet.';
+                    return;
+                }
+
+                listMessage.textContent =
+                    `Showing ${tournaments.length} tournament(s).`;
+
+                tournaments.forEach(tournament => {
+                    const row = document.createElement('tr');
+
+                    addCell(row, tournament.TOURNAMENT_NAME);
+                    addCell(row, displayDate(tournament.TOURNAMENT_DATE));
+
+                    const location = [
+                        tournament.STREET_ADDRESS,
+                        tournament.TOWN_NAME,
+                        tournament.POSTAL_CODE
+                    ].filter(Boolean).join(', ');
+
+                    addCell(row, location);
+                    addCell(row, tournament.CATEGORY_NAME);
+                    addCell(row, tournament.TOURNAMENT_ENTRY_FEE);
+                    addCell(row, tournament.TOURNAMENT_DESCRIPTION);
+
+                    const actionsCell = document.createElement('td');
+                    actionsCell.className = 'actions-cell';
+
+                   const editButton = createActionButton(
+    'Edit',
+    'edit-button',
+    () => editTournament(tournament.TOURNAMENT_ID)
+);
+
+                    const deleteButton = createActionButton(
+                        'Delete',
+                        'delete-button',
+                        () => deleteTournament(
+                            tournament.TOURNAMENT_ID,
+                            tournament.TOURNAMENT_NAME
+                        )
+                    );
+
+                    actionsCell.appendChild(editButton);
+                    actionsCell.appendChild(deleteButton);
+                    row.appendChild(actionsCell);
+                    tableBody.appendChild(row);
+                });
+            } catch (error) {
+                listMessage.textContent =
+                    'Could not load tournaments: ' + error.message;
+            }
+        }
+         
+         function editTournament(id) {
+          console.log('Clicked tournament ID:', id);
+console.log('Loaded tournament:', tournaments.find(
+    item => String(item.TOURNAMENT_ID) === String(id)
+));
+    const tournament = tournaments.find(
+        item => String(item.TOURNAMENT_ID) === String(id)
+    );
+
+    if (!tournament) {
+        message.textContent =
+            'Tournament not found. Please reload the tournament list.';
+        return;
+    }
+
+    editingTournamentId = tournament.TOURNAMENT_ID;
+
+    form.elements.tournamentName.value =
+        tournament.TOURNAMENT_NAME || '';
+
+    form.elements.tournamentDate.value =
+        formatDateForInput(tournament.TOURNAMENT_DATE);
+
+form.elements.locationId.value =
+    tournament.LOCATION_ID == null
+        ? ''
+        : String(tournament.LOCATION_ID);
+
+form.elements.ageGroupId.value =
+    tournament.AGE_GROUP_ID == null
+        ? ''
+        : String(tournament.AGE_GROUP_ID);
+
+    form.elements.affiliationId.value =
+        tournament.AFFILIATION_ID == null
+            ? ''
+            : String(tournament.AFFILIATION_ID);
+
+    form.elements.entryFee.value =
+        tournament.TOURNAMENT_ENTRY_FEE ?? 0;
+
+    form.elements.description.value =
+        tournament.TOURNAMENT_DESCRIPTION || '';
+
+    formTitle.textContent = 'Edit Tournament';
+    submitButton.textContent = 'Save Changes';
+    cancelEditButton.style.display = 'inline-block';
+
+    message.textContent =
+        'Editing: ' + tournament.TOURNAMENT_NAME;
+
+    form.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+    });
+}
+
+        function resetForm() {
+            editingTournamentId = null;
+            form.reset();
+
+            formTitle.textContent = 'Create an Upcoming Tournament';
+            submitButton.textContent = 'Create Tournament';
+            cancelEditButton.style.display = 'none';
+            message.textContent = '';
+        }
+
+        async function deleteTournament(id, name) {
+            const confirmed = window.confirm(
+                `Are you sure you want to delete "${name}"? ` +
+                'This action cannot be undone.'
+            );
+
+            if (!confirmed) return;
+
+            listMessage.textContent = 'Deleting tournament...';
+
+            try {
+                const result = await apiRequest(
+                    '/api/tournaments/' + encodeURIComponent(id),
+                    { method: 'DELETE' }
+                );
+
+                if (String(editingTournamentId) === String(id)) {
+                    resetForm();
+                }
+
+                await loadTournaments();
+
+                listMessage.textContent =
+                    result.message || 'Tournament deleted successfully.';
+            } catch (error) {
+                listMessage.textContent =
+                    'Could not delete tournament: ' + error.message;
+            }
+        }
+
+        form.addEventListener('submit', async event => {
+            event.preventDefault();
+
+            const isEditing = editingTournamentId !== null;
+
+            message.textContent = isEditing
+                ? 'Saving tournament changes...'
+                : 'Creating tournament...';
+
+            const data = Object.fromEntries(
+                new FormData(form).entries()
+            );
+
+            data.locationId = Number(data.locationId);
+            data.ageGroupId = Number(data.ageGroupId);
+            data.entryFee = Number(data.entryFee);
+
+            data.affiliationId = data.affiliationId
+                ? Number(data.affiliationId)
+                : null;
+
+            try {
+                const url = isEditing
+                    ? '/api/tournaments/' +
+                      encodeURIComponent(editingTournamentId)
+                    : '/api/organiser/tournaments';
+
+                const result = await apiRequest(url, {
+                    method: isEditing ? 'PUT' : 'POST',
+                    body: JSON.stringify(data)
+                });
+
+                const successMessage = result.message ||
+                    (isEditing
+                        ? 'Tournament updated successfully.'
+                        : 'Tournament created successfully.');
+
+                resetForm();
+                message.textContent = successMessage;
+
+                await loadTournaments();
+            } catch (error) {
+                message.textContent =
+                    'Could not save tournament: ' + error.message;
+            }
+        });
+
+        cancelEditButton.addEventListener('click', resetForm);
+
+        async function initialisePage() {
+            try {
+                const response = await fetch('/api/auth/me', {
+                    credentials: 'same-origin'
+                });
+
+                if (!response.ok) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+
+                const authData = await response.json();
+                const role = authData.user?.activeRole?.ROLE_NAME;
+
+                if (role !== 'ORGANISER') {
+                    document.querySelector('main').textContent =
+                        'Access denied. This page is for organisers only.';
+                    return;
+                }
+
+                await loadOptions();
+                await loadTournaments();
+            } catch (error) {
+                message.textContent =
+                    'Could not initialise the page: ' + error.message;
+
+                listMessage.textContent =
+                    'Could not load the tournament management page.';
+            }
+        }
+
+        initialisePage();
+    </script>
+</body>
+</html>

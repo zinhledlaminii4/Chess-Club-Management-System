@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Players - Chess Club Management System</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1>Chess Club Management System</h1>
+        <p>Players</p>
+    </header>
+
+    <nav>
+        <a href="index.html">Dashboard</a>
+        <a href="players.html">Players</a>
+        <a href="coaches.html">Coaches</a>
+        <a href="tournaments.html">Tournaments</a>
+        <a href="classes.html">Classes</a>
+        <a href="announcements.html">Announcements</a>
+    </nav>
+
+    <div class="container">
+        <section class="welcome">
+            <h2>Registered Players</h2>
+            <p>Register new players, update player information, or remove a player from your club.</p>
+        </section>
+
+        <section class="players-section">
+            <h2 id="formHeading">Register a Player</h2>
+
+            <form id="playerForm">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username"
+                           required maxlength="50" autocomplete="username">
+                </div>
+
+                <div class="form-group">
+                    <label for="firstName">First Name</label>
+                    <input type="text" id="firstName" name="firstName"
+                           required maxlength="100">
+                </div>
+
+                <div class="form-group">
+                    <label for="lastName">Last Name</label>
+                    <input type="text" id="lastName" name="lastName"
+                           required maxlength="100">
+                </div>
+
+                <div class="form-group">
+                    <label for="dob">Date of Birth</label>
+                    <input type="date" id="dob" name="dob">
+                </div>
+
+                <div class="form-group">
+                    <label for="gender">Gender</label>
+                    <select id="gender" name="gender">
+                        <option value="">Select gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="phone">Phone Number</label>
+                    <input type="tel" id="phone" name="phone" maxlength="20">
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email"
+                           required maxlength="150">
+                </div>
+
+                <div class="form-group" id="passwordGroup">
+                    <label for="password">Initial Password</label>
+                    <input type="password" id="password" name="password"
+                           required minlength="8" autocomplete="new-password">
+                    <small>At least 8 characters. Give the player their login details securely.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="rating">Chess Rating</label>
+                    <input type="number" id="rating" name="rating" min="0" step="1">
+                </div>
+
+                <button type="submit" id="saveButton">Register Player</button>
+                <button type="button" id="cancelButton" hidden>Cancel Edit</button>
+
+                <p id="formMessage" role="status"></p>
+            </form>
+        </section>
+
+        <section class="players-section">
+            <h2>Player Records</h2>
+
+            <div class="table-container">
+                <table id="playersTable">
+                    <thead>
+                        <tr>
+                            <th>Player ID</th>
+                            <th>Person ID</th>
+                            <th>Username</th>
+                            <th>First Name</th>
+                            <th>Last Name</th>
+                            <th>Email</th>
+                            <th>Rating</th>
+                            <th>Chess Club</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="playersTableBody">
+                        <tr><td colspan="9">Loading players...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <footer>
+        <p>Chess Club Management System © 2026</p>
+    </footer>
+
+    <script>
+        const playerForm = document.getElementById('playerForm');
+        const formMessage = document.getElementById('formMessage');
+        const saveButton = document.getElementById('saveButton');
+        const cancelButton = document.getElementById('cancelButton');
+        const formHeading = document.getElementById('formHeading');
+        const tableBody = document.getElementById('playersTableBody');
+        const passwordInput = document.getElementById('password');
+        const passwordGroup = document.getElementById('passwordGroup');
+
+        let coachClubId = null;
+        let editingPlayerId = null;
+        let playersCache = [];
+
+        async function apiRequest(url, options = {}) {
+            const response = await fetch(url, options);
+            const result = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                throw new Error(result.error || 'The request failed.');
+            }
+
+            return result;
+        }
+
+        async function loadCoachClub() {
+            const data = await apiRequest('/api/auth/me');
+            const role = data.user?.activeRole;
+
+            if (!role || role.ROLE_NAME !== 'COACH' || role.CCID == null) {
+                throw new Error(
+                    'Please log in with a coach account assigned to a chess club.'
+                );
+            }
+
+            coachClubId = Number(role.CCID);
+
+            if (!Number.isInteger(coachClubId) || coachClubId <= 0) {
+                throw new Error('The coach club ID is invalid.');
+            }
+        }
+
+        function showMessage(message, color = 'red') {
+            formMessage.textContent = message;
+            formMessage.style.color = color;
+        }
+
+        function formatDate(value) {
+            if (!value) return '';
+
+            const date = new Date(value);
+
+            if (Number.isNaN(date.getTime())) {
+                return String(value).slice(0, 10);
+            }
+
+            return date.toISOString().slice(0, 10);
+        }
+
+        async function loadPlayers() {
+            try {
+                const players = await apiRequest('/api/players');
+                playersCache = Array.isArray(players) ? players : [];
+
+                tableBody.replaceChildren();
+
+                if (playersCache.length === 0) {
+                    tableBody.innerHTML =
+                        '<tr><td colspan="9">No players found.</td></tr>';
+                    return;
+                }
+
+                playersCache.forEach(player => {
+                    const row = document.createElement('tr');
+
+                    [
+                        player.PLAYER_ID,
+                        player.PERSON_ID,
+                        player.USERNAME,
+                        player.FIRST_NAME,
+                        player.LAST_NAME,
+                        player.EMAIL,
+                        player.RATING ?? '',
+                        player.CC_NAME ?? ''
+                    ].forEach(value => {
+                        const cell = document.createElement('td');
+                        cell.textContent = value ?? '';
+                        row.appendChild(cell);
+                    });
+
+                    const actions = document.createElement('td');
+
+                    const editButton = document.createElement('button');
+                    editButton.type = 'button';
+                    editButton.textContent = 'Edit';
+                    editButton.addEventListener('click', () => editPlayer(player));
+
+                    const deleteButton = document.createElement('button');
+                    deleteButton.type = 'button';
+                    deleteButton.textContent = 'Delete';
+                    deleteButton.addEventListener('click', () => deletePlayer(player));
+
+                    actions.append(
+                        editButton,
+                        document.createTextNode(' '),
+                        deleteButton
+                    );
+
+                    row.appendChild(actions);
+                    tableBody.appendChild(row);
+                });
+
+            } catch (error) {
+                console.error('Loading players failed:', error);
+                tableBody.innerHTML =
+                    '<tr><td colspan="9">Failed to load players.</td></tr>';
+                showMessage(error.message);
+            }
+        }
+
+        function editPlayer(player) {
+            editingPlayerId = player.PLAYER_ID;
+
+            document.getElementById('username').value = player.USERNAME ?? '';
+            document.getElementById('firstName').value = player.FIRST_NAME ?? '';
+            document.getElementById('lastName').value = player.LAST_NAME ?? '';
+            document.getElementById('email').value = player.EMAIL ?? '';
+            document.getElementById('rating').value = player.RATING ?? '';
+            document.getElementById('dob').value = formatDate(player.DOB);
+            document.getElementById('gender').value = player.GENDER ?? '';
+            document.getElementById('phone').value = player.PHONE ?? '';
+
+            // Passwords are only collected during registration.
+            passwordInput.value = '';
+            passwordInput.required = false;
+            passwordGroup.hidden = true;
+
+            formHeading.textContent = 'Edit Player';
+            saveButton.textContent = 'Save Changes';
+            cancelButton.hidden = false;
+
+            showMessage(
+                'Editing player: ' + (player.USERNAME ?? player.PLAYER_ID),
+                'green'
+            );
+
+            playerForm.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        }
+
+        function cancelEdit() {
+            editingPlayerId = null;
+            playerForm.reset();
+
+            passwordInput.required = true;
+            passwordGroup.hidden = false;
+
+            formHeading.textContent = 'Register a Player';
+            saveButton.textContent = 'Register Player';
+            cancelButton.hidden = true;
+            formMessage.textContent = '';
+        }
+
+        cancelButton.addEventListener('click', cancelEdit);
+
+        playerForm.addEventListener('submit', async function (event) {
+            event.preventDefault();
+
+            if (!playerForm.reportValidity()) return;
+
+            saveButton.disabled = true;
+            showMessage('');
+
+            try {
+                if (coachClubId === null) {
+                    await loadCoachClub();
+                }
+
+                const formData = new FormData(playerForm);
+                const isEditing = editingPlayerId !== null;
+
+                const player = {
+                    username: formData.get('username').trim(),
+                    firstName: formData.get('firstName').trim(),
+                    lastName: formData.get('lastName').trim(),
+                    ccid: coachClubId,
+                    dob: formData.get('dob') || null,
+                    gender: formData.get('gender') || null,
+                    phone: formData.get('phone').trim() || null,
+                    email: formData.get('email').trim(),
+                    rating: formData.get('rating') === ''
+                        ? null
+                        : Number(formData.get('rating'))
+                };
+
+                // Only a new player receives an initial password.
+                if (!isEditing) {
+                    player.password = formData.get('password');
+                }
+
+                const url = isEditing
+                    ? `/api/players/${editingPlayerId}`
+                    : '/api/players';
+
+                const result = await apiRequest(url, {
+                    method: isEditing ? 'PUT' : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(player)
+                });
+
+                showMessage(
+                    result.message ||
+                        (isEditing
+                            ? 'Player updated successfully!'
+                            : 'Player registered successfully!'),
+                    'green'
+                );
+
+                cancelEdit();
+                await loadPlayers();
+
+            } catch (error) {
+                console.error('Saving player failed:', error);
+                showMessage(error.message);
+            } finally {
+                saveButton.disabled = false;
+            }
+        });
+
+        async function deletePlayer(player) {
+            const playerName =
+                `${player.FIRST_NAME ?? ''} ${player.LAST_NAME ?? ''}`.trim()
+                || player.USERNAME
+                || `Player ${player.PLAYER_ID}`;
+
+            if (!confirm(
+                `Are you sure you want to delete ${playerName}? This action cannot be undone.`
+            )) {
+                return;
+            }
+
+            try {
+                const result = await apiRequest(
+                    `/api/players/${player.PLAYER_ID}`,
+                    { method: 'DELETE' }
+                );
+
+                if (editingPlayerId === player.PLAYER_ID) {
+                    cancelEdit();
+                }
+
+                showMessage(
+                    result.message || 'Player deleted successfully!',
+                    'green'
+                );
+
+                await loadPlayers();
+
+            } catch (error) {
+                console.error('Deleting player failed:', error);
+                showMessage(error.message);
+            }
+        }
+
+        async function initializePage() {
+            try {
+                await loadCoachClub();
+                await loadPlayers();
+            } catch (error) {
+                console.error('Page initialization failed:', error);
+                showMessage(error.message);
+
+                tableBody.innerHTML =
+                    '<tr><td colspan="9">Unable to load players. Check your login and refresh.</td></tr>';
+            }
+        }
+
+        initializePage();
+    </script>
+</body>
+</html>

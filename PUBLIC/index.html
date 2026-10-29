@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Club Management System</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <header>
+        <h1>Chess Club Management System</h1>
+        <p>Manage players, coaches, tournaments and chess activities</p>
+    </header>
+
+    <nav>
+        <a href="index.html">Dashboard</a>
+        <a href="players.html" data-roles="PLAYER,COACH">Players</a>
+        <a href="coaches.html" data-roles="COACH">Coaches</a>
+        <a href="tournaments.html" data-roles="PLAYER,ORGANISER">Tournaments</a>
+        <a href="classes.html" data-roles="PLAYER,COACH">Classes</a>
+        <a href="announcements.html" data-roles="PLAYER,IT_ADMIN">Announcements</a>
+        <a href="club-tournament-entries.html" data-roles="COACH">Club Entries</a>
+        <a href="organiser-entries.html" data-roles="ORGANISER">Review Club Entries</a>
+        <a href="tournaments-rsvps.html" data-roles="PLAYER,ORGANISER">Tournament RSVPs</a>
+        <a href="coach-player-assignments.html" data-roles="COACH">Coach-Player Assignments</a>
+        <a href="profile.html">My Profile</a>
+        <a href="#" id="logoutLink">Logout</a>
+    </nav>
+
+    <div class="container">
+        <section class="welcome">
+            <h2>Welcome to the Chess Club</h2>
+            <p>
+                This system helps chess clubs manage their players,
+                coaches, tournaments, classes and announcements.
+            </p>
+        </section>
+
+        <section class="cards">
+
+            <div class="card" data-roles="PLAYER,COACH">
+                <h2>Players</h2>
+                <p>Manage registered chess players.</p>
+                <a href="players.html">View Players</a>
+            </div>
+
+            <div class="card" data-roles="COACH">
+                <h2>Coaches</h2>
+                <p>Manage coaches and player assignments.</p>
+                <a href="coaches.html">View Coaches</a>
+            </div>
+
+            <div class="card" data-roles="PLAYER,ORGANISER,COACH">
+                <h2>Tournaments</h2>
+                <p>View and manage chess tournaments.</p>
+                <a href="tournaments.html">View Tournaments</a>
+            </div>
+
+            <div class="card" data-roles="PLAYER,COACH">
+                <h2>Classes</h2>
+                <p>Manage chess lessons and participants.</p>
+                <a href="classes.html">View Classes</a>
+            </div>
+
+            <div class="card" data-roles="PLAYER,IT_ADMIN">
+                <h2>Announcements</h2>
+                <p>View important club announcements.</p>
+                <a href="announcements.html">View Announcements</a>
+            </div>
+
+             <div class="card" data-roles="PLAYER">
+    <h2>Submit Tournament RSVP</h2>
+    <p>Register your attendance for a chess tournament.</p>
+    <a href="tournaments-rsvps.html">Submit RSVP</a>
+</div>
+
+<div class="card" data-roles="COACH">
+    <h2>Tournament RSVPs</h2>
+    <p>View players' tournament attendance responses.</p>
+    <a href="tournaments-rsvps.html">View RSVPs</a>
+</div>
+
+<div class="card" data-roles="ORGANISER">
+    <h2>Tournament RSVPs</h2>
+    <p>View tournament attendance responses.</p>
+    <a href="tournaments-rsvps.html">View RSVPs</a>
+</div>
+
+            <div class="card" data-roles="COACH">
+                <h2>Club Tournament Entries</h2>
+                <p>Submit club entries and view their status.</p>
+                <a href="club-tournament-entries.html">Submit Club Entry</a>
+            </div>
+
+            <div class="card" data-roles="ORGANISER">
+                <h2>Review Club Entries</h2>
+                <p>Approve or reject tournament entries submitted by coaches.</p>
+                <a href="organiser-entries.html">Review Entries</a>
+            </div>
+
+            <div class="card" data-roles="COACH">
+                <h2>Coach-Player Assignments</h2>
+                <p>Assign players to coaches.</p>
+                <a href="coach-player-assignments.html">View Assignments</a>
+            </div>
+
+            <div class="card" data-roles="ORGANISER">
+                <h2>Create Tournament</h2>
+                <p>Create and organize chess tournaments.</p>
+                <a href="organiser-tournaments.html">Create Tournament</a>
+            </div>
+
+        </section>
+        <section class="recent-matches" data-roles="PLAYER,COACH,ORGANISER">
+    <h2>Recent Matches</h2>
+    <p>Latest matches recorded in the Chess Club system.</p>
+
+    <div id="dashboardMatchesMessage" role="status">
+        Loading recent matches...
+    </div>
+
+    <div class="table-container">
+        <table id="dashboardMatchesTable">
+            <thead>
+                <tr>
+                    <th>Match ID</th>
+                    <th>White Player</th>
+                    <th>Black Player</th>
+                    <th>Date and Time</th>
+                    <th>Result</th>
+                </tr>
+            </thead>
+            <tbody id="dashboardMatchesBody"></tbody>
+        </table>
+    </div>
+
+    <p><a href="matches.html">View All Matches</a></p>
+</section>
+    </div>
+
+    <footer>
+        <p>Chess Club Management System © 2026</p>
+    </footer>
+
+    <script>
+
+        async function loadDashboardMatches() {
+    const message = document.getElementById('dashboardMatchesMessage');
+    const tableBody = document.getElementById('dashboardMatchesBody');
+
+    try {
+        const response = await fetch('/api/matches', {
+            credentials: 'same-origin'
+        });
+
+        if (!response.ok) {
+            throw new Error('Unable to load recent matches.');
+        }
+
+        const matches = await response.json();
+        tableBody.replaceChildren();
+
+        if (matches.length === 0) {
+            message.textContent = 'No matches have been recorded yet.';
+            return;
+        }
+
+        // Display the five most recent matches.
+        matches.slice(0, 5).forEach(match => {
+            const row = document.createElement('tr');
+
+            const values = [
+                match.MATCH_ID,
+                `${match.WHITE_FIRST_NAME} ${match.WHITE_LAST_NAME}`,
+                `${match.BLACK_FIRST_NAME} ${match.BLACK_LAST_NAME}`,
+                new Date(match.MATCH_DATE).toLocaleString(),
+                match.RESULT || 'Pending'
+            ];
+
+            values.forEach(value => {
+                const cell = document.createElement('td');
+                cell.textContent = value;
+                row.appendChild(cell);
+            });
+
+            tableBody.appendChild(row);
+        });
+
+        message.textContent =
+            `Showing ${Math.min(matches.length, 5)} recent match(es).`;
+
+    } catch (error) {
+        console.error('Dashboard matches error:', error);
+        message.textContent = error.message;
+    }
+}
+
+        async function setupDashboard() {
+            try {
+                const response = await fetch('/api/auth/me', {
+                    credentials: 'same-origin'
+                });
+
+                if (!response.ok) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+
+                const data = await response.json();
+                const role = data.user?.activeRole?.ROLE_NAME;
+
+                if (!role) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+
+                document.querySelector('header p').textContent =
+                    'Logged in as: ' + role.replace('_', ' ');
+
+                document.querySelectorAll('nav a[data-roles]').forEach(link => {
+                    const permittedRoles = link.dataset.roles.split(',');
+                    link.style.display =
+                        permittedRoles.includes(role) ? '' : 'none';
+                });
+
+                document.querySelectorAll('.card[data-roles]').forEach(card => {
+                    const permittedRoles = card.dataset.roles.split(',');
+                    card.style.display =
+                        permittedRoles.includes(role) ? '' : 'none';
+                });
+
+                document.querySelectorAll('section[data-roles]').forEach(section => {
+    const permittedRoles = section.dataset.roles.split(',');
+    section.style.display =
+        permittedRoles.includes(role) ? '' : 'none';
+});
+
+if (['PLAYER', 'COACH', 'ORGANISER'].includes(role)) {
+    loadDashboardMatches();
+}
+
+            } catch (error) {
+                console.error('Dashboard initialization failed:', error);
+                window.location.href = '/login.html';
+            }
+        }
+
+        document.getElementById('logoutLink').addEventListener(
+            'click',
+            async event => {
+                event.preventDefault();
+
+                try {
+                    await fetch('/api/auth/logout', {
+                        method: 'POST',
+                        credentials: 'same-origin'
+                    });
+                } finally {
+                    window.location.href = '/login.html';
+                }
+            }
+        );
+
+        setupDashboard();
+    </script>
+
+</body>
+</html>

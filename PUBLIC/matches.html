@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matches Played | Chess Club</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <header>
+        <h1>Chess Club</h1>
+        <nav>
+            <a href="dashboard.html">Dashboard</a>
+            <a href="matches.html">Matches Played</a>
+        </nav>
+    </header>
+
+    <main class="container">
+        <h2>Matches Played</h2>
+        <p>View the matches recorded in the Chess Club system.</p>
+
+        <div id="message" role="status">
+            Loading matches...
+        </div>
+
+        <div class="matches-section">
+            <table id="matchesTable">
+                <thead>
+                    <tr>
+                        <th>Match ID</th>
+                        <th>White Player</th>
+                        <th>Black Player</th>
+                        <th>Date and Time</th>
+                        <th>Result</th>
+                    </tr>
+                </thead>
+                <tbody id="matchesTableBody"></tbody>
+            </table>
+        </div>
+    </main>
+
+    <script>
+        async function loadMatches() {
+            const message = document.getElementById('message');
+            const tableBody = document.getElementById('matchesTableBody');
+
+            try {
+                const response = await fetch('/api/matches');
+
+                if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
+                        throw new Error(
+                            'You are not authorised to view matches. Please log in with an eligible account.'
+                        );
+                    }
+
+                    throw new Error('Unable to load matches.');
+                }
+
+                const matches = await response.json();
+                tableBody.replaceChildren();
+
+                if (matches.length === 0) {
+                    message.textContent = 'No matches have been recorded yet.';
+                    return;
+                }
+
+                matches.forEach(match => {
+                    const row = document.createElement('tr');
+
+                    const values = [
+                        match.MATCH_ID,
+                        `${match.WHITE_FIRST_NAME} ${match.WHITE_LAST_NAME}`,
+                        `${match.BLACK_FIRST_NAME} ${match.BLACK_LAST_NAME}`,
+                        new Date(match.MATCH_DATE).toLocaleString(),
+                        match.RESULT || 'Pending'
+                    ];
+
+                    values.forEach(value => {
+                        const cell = document.createElement('td');
+                        cell.textContent = value;
+                        row.appendChild(cell);
+                    });
+
+                    tableBody.appendChild(row);
+                });
+
+                message.textContent = `Showing ${matches.length} match(es).`;
+
+            } catch (error) {
+                console.error('Error loading matches:', error);
+                message.textContent = error.message;
+            }
+        }
+
+        loadMatches();
+    </script>
+
+</body>
+</html>

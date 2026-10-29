@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tournaments - Chess Club Management System</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1>Chess Club Management System</h1>
+        <p>Tournaments</p>
+    </header>
+
+    <nav>
+        <a href="index.html">Dashboard</a>
+        <a href="players.html">Players</a>
+        <a href="coaches.html">Coaches</a>
+        <a href="tournaments.html">Tournaments</a>
+        <a href="classes.html">Classes</a>
+        <a href="announcements.html">Announcements</a>
+    </nav>
+
+    <div class="container">
+        <section class="welcome">
+            <h2>Chess Tournaments</h2>
+            <p>View upcoming tournaments. Organizers can manage their own tournaments.</p>
+        </section>
+
+        <section id="tournamentManagement" class="welcome" hidden>
+            <h2 id="formTitle">Create Tournament</h2>
+            <form id="tournamentForm">
+                <label for="tournamentName">Tournament Name</label>
+                <input id="tournamentName" name="tournamentName" required maxlength="150">
+
+                <label for="tournamentDate">Date</label>
+                <input id="tournamentDate" name="tournamentDate" type="date" required>
+
+                <label for="locationId">Location ID</label>
+                <input id="locationId" name="locationId" type="number" min="1">
+
+                <label for="ageGroupId">Age Group ID</label>
+                <input id="ageGroupId" name="ageGroupId" type="number" min="1">
+
+                <label for="entryFee">Entry Fee (R)</label>
+                <input id="entryFee" name="entryFee" type="number" min="0" step="0.01">
+
+                <label for="description">Description</label>
+                <textarea id="description" name="description" maxlength="500"></textarea>
+
+                <button type="submit" id="saveTournament">Create Tournament</button>
+                <button type="button" id="cancelEdit" hidden>Cancel Edit</button>
+                <p id="tournamentMessage" role="status"></p>
+            </form>
+        </section>
+
+        <section class="welcome">
+            <table id="tournamentsTable">
+                <thead>
+                    <tr>
+                        <th>Tournament ID</th>
+                        <th>Tournament Name</th>
+                        <th>Date</th>
+                        <th>Location</th>
+                        <th>Age Group</th>
+                        <th>Organiser</th>
+                        <th>Entry Fee</th>
+                        <th id="actionsHeading" hidden>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="tournamentsTableBody">
+                    <tr><td colspan="8">Loading tournaments...</td></tr>
+                </tbody>
+            </table>
+        </section>
+    </div>
+
+    <footer>
+        <p>Chess Club Management System © 2026</p>
+    </footer>
+
+    <script>
+        const body = document.getElementById('tournamentsTableBody');
+        const form = document.getElementById('tournamentForm');
+        const panel = document.getElementById('tournamentManagement');
+        const message = document.getElementById('tournamentMessage');
+        let activeRole = null;
+        let editingId = null;
+        let tournaments = [];
+
+        const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, ch => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;',
+            '"': '&quot;', "'": '&#39;'
+        })[ch]);
+
+        async function api(url, options = {}) {
+            const response = await fetch(url, {
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+                ...options
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.error || 'Request failed.');
+            return data;
+        }
+
+        function resetForm() {
+            editingId = null;
+            form.reset();
+            document.getElementById('formTitle').textContent = 'Create Tournament';
+            document.getElementById('saveTournament').textContent = 'Create Tournament';
+            document.getElementById('cancelEdit').hidden = true;
+            message.textContent = '';
+        }
+
+        function editTournament(t) {
+            editingId = t.TOURNAMENT_ID;
+            document.getElementById('tournamentName').value = t.TOURNAMENT_NAME || '';
+            document.getElementById('tournamentDate').value =
+                t.TOURNAMENT_DATE ? String(t.TOURNAMENT_DATE).slice(0, 10) : '';
+            document.getElementById('locationId').value = t.LOCATION_ID || '';
+            document.getElementById('ageGroupId').value = t.AGE_GROUP_ID || '';
+            document.getElementById('entryFee').value = t.TOURNAMENT_ENTRY_FEE ?? '';
+            document.getElementById('description').value = t.TOURNAMENT_DESCRIPTION || '';
+            document.getElementById('formTitle').textContent = 'Edit Tournament';
+            document.getElementById('saveTournament').textContent = 'Save Changes';
+            document.getElementById('cancelEdit').hidden = false;
+            panel.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function deleteTournament(id) {
+            const t = tournaments.find(item => Number(item.TOURNAMENT_ID) === Number(id));
+            if (!t || !confirm(`Delete "${t.TOURNAMENT_NAME}"? This cannot be undone.`)) return;
+
+            try {
+                await api(`/api/tournaments/${id}`, { method: 'DELETE' });
+                message.textContent = 'Tournament deleted.';
+                await loadTournaments();
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        async function loadTournaments() {
+            try {
+                const result = await api('/api/tournaments');
+                tournaments = Array.isArray(result) ? result : [];
+                body.innerHTML = '';
+
+                if (!tournaments.length) {
+                    body.innerHTML = '<tr><td colspan="8">No tournaments found.</td></tr>';
+                    return;
+                }
+
+                tournaments.forEach(t => {
+                    const row = document.createElement('tr');
+                    const date = t.TOURNAMENT_DATE
+                        ? new Date(String(t.TOURNAMENT_DATE).slice(0, 10) + 'T00:00:00')
+                            .toLocaleDateString('en-ZA')
+                        : '';
+                    const isOwner = activeRole?.ROLE_NAME === 'ORGANISER' &&
+                        Number(t.ORGANISERID) === Number(activeRole.ROLE_ID);
+
+                    row.innerHTML = `
+                        <td>${escapeHTML(t.TOURNAMENT_ID)}</td>
+                        <td>${escapeHTML(t.TOURNAMENT_NAME)}</td>
+                        <td>${escapeHTML(date)}</td>
+                        <td>${escapeHTML([t.STREET_ADDRESS, t.TOWN_NAME].filter(Boolean).join(', '))}</td>
+                        <td>${escapeHTML(t.CATEGORY_NAME)}</td>
+                        <td>${escapeHTML([t.FIRST_NAME, t.LAST_NAME].filter(Boolean).join(' '))}</td>
+                        <td>${t.TOURNAMENT_ENTRY_FEE == null ? '' : 'R' + escapeHTML(t.TOURNAMENT_ENTRY_FEE)}</td>
+                        <td>${isOwner
+                            ? `<button type="button" data-edit="${Number(t.TOURNAMENT_ID)}">Edit</button>
+                               <button type="button" data-delete="${Number(t.TOURNAMENT_ID)}">Delete</button>`
+                            : (activeRole?.ROLE_NAME === 'ORGANISER' ? '' : 'View only')}
+                        </td>`;
+                    body.appendChild(row);
+                });
+            } catch (error) {
+                console.error(error);
+                body.innerHTML = '<tr><td colspan="8">Failed to load tournaments. Please sign in and try again.</td></tr>';
+            }
+        }
+
+        body.addEventListener('click', event => {
+            const editId = event.target.dataset.edit;
+            const deleteId = event.target.dataset.delete;
+            if (editId) {
+                const t = tournaments.find(item => Number(item.TOURNAMENT_ID) === Number(editId));
+                if (t) editTournament(t);
+            }
+            if (deleteId) deleteTournament(deleteId);
+        });
+
+        form.addEventListener('submit', async event => {
+            event.preventDefault();
+            message.textContent = '';
+
+            const payload = {
+                tournamentName: document.getElementById('tournamentName').value.trim(),
+                tournamentDate: document.getElementById('tournamentDate').value,
+                locationId: document.getElementById('locationId').value || null,
+                ageGroupId: document.getElementById('ageGroupId').value || null,
+                entryFee: document.getElementById('entryFee').value || null,
+                description: document.getElementById('description').value.trim() || null
+            };
+
+            try {
+                await api(editingId ? `/api/tournaments/${editingId}` : '/api/tournaments', {
+                    method: editingId ? 'PUT' : 'POST',
+                    body: JSON.stringify(payload)
+                });
+                message.textContent = editingId ? 'Tournament updated.' : 'Tournament created.';
+                resetForm();
+                await loadTournaments();
+            } catch (error) {
+                message.textContent = error.message;
+            }
+        });
+
+        document.getElementById('cancelEdit').addEventListener('click', resetForm);
+
+        async function init() {
+            try {
+                const session = await api('/api/auth/me');
+                activeRole = session.activeRole || session.user?.activeRole || null;
+
+                if (activeRole?.ROLE_NAME === 'ORGANISER') {
+                    panel.hidden = false;
+                    document.getElementById('actionsHeading').hidden = false;
+                }
+            } catch (error) {
+                console.warn('Session details unavailable:', error.message);
+            }
+            await loadTournaments();
+        }
+
+        init();
+    </script>
+</body>
+</html>

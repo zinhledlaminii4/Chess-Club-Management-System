@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Review Club Tournament Entries</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="organiser-tournaments.html">Create Tournament</a>
+            <a href="tournaments.html">View Tournaments</a>
+            <a href="organiser-entries.html">Review Club Entries</a>
+            <a href="#" id="logoutLink">Logout</a>
+        </nav>
+    </header>
+
+    <main class="container">
+        <h1>Club Tournament Entries</h1>
+        <p>Approve or reject tournament entries submitted by coaches.</p>
+        <p id="message" role="status"></p>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Club</th>
+                        <th>Tournament</th>
+                        <th>Date Submitted</th>
+                        <th>Status</th>
+                        <th>Decision</th>
+                    </tr>
+                </thead>
+                <tbody id="entriesBody">
+                    <tr>
+                        <td colspan="5">Loading club entries...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script>
+        const body = document.getElementById('entriesBody');
+        const message = document.getElementById('message');
+
+        async function loadEntries() {
+            message.textContent = '';
+
+            try {
+                const response = await fetch(
+                    '/api/organiser/club-tournament-entries'
+                );
+
+                const entries = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(
+                        entries.error || 'Could not load club entries.'
+                    );
+                }
+
+                body.replaceChildren();
+
+                if (!Array.isArray(entries) || entries.length === 0) {
+                    body.innerHTML =
+                        '<tr><td colspan="5">No club tournament entries have been submitted yet.</td></tr>';
+                    return;
+                }
+
+                entries.forEach(entry => {
+                    const row = document.createElement('tr');
+
+                    const values = [
+                        entry.CC_NAME,
+                        entry.TOURNAMENT_NAME,
+                        entry.ENTRY_DATE
+                            ? new Date(entry.ENTRY_DATE).toLocaleDateString()
+                            : '—',
+                        entry.STATUS || 'Unknown'
+                    ];
+
+                    values.forEach(value => {
+                        const cell = document.createElement('td');
+                        cell.textContent = value ?? '—';
+                        row.appendChild(cell);
+                    });
+
+                    const actions = document.createElement('td');
+                    const currentStatus = String(entry.STATUS || '')
+                        .trim()
+                        .toLowerCase();
+
+                    if (currentStatus === 'pending') {
+                        ['Approved', 'Rejected'].forEach(status => {
+                            const button = document.createElement('button');
+
+                            button.type = 'button';
+                            button.textContent =
+                                status === 'Approved' ? 'Approve' : 'Reject';
+
+                            button.style.marginRight = '6px';
+
+                            button.addEventListener('click', () => {
+                                decideEntry(entry.ENTRY_ID, status, button);
+                            });
+
+                            actions.appendChild(button);
+                        });
+                    } else {
+                        actions.textContent = entry.DECISION_DATE
+                            ? 'Decision recorded'
+                            : 'No action available';
+                    }
+
+                    row.appendChild(actions);
+                    body.appendChild(row);
+                });
+
+            } catch (error) {
+                body.innerHTML =
+                    '<tr><td colspan="5">Entries could not be loaded.</td></tr>';
+                message.textContent =
+                    error.message + ' Check the Organiser API route in server.js.';
+            }
+        }
+
+        async function decideEntry(id, status, button) {
+            const confirmed = confirm(
+                `Are you sure you want to ${status.toLowerCase()} this club entry?`
+            );
+
+            if (!confirmed) return;
+
+            button.disabled = true;
+            message.textContent = 'Saving decision...';
+
+            try {
+                const response = await fetch(
+                    `/api/organiser/club-tournament-entries/${id}/decision`,
+                    {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ status })
+                    }
+                );
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(
+                        result.error || 'Could not save the decision.'
+                    );
+                }
+
+                message.textContent = result.message;
+                await loadEntries();
+
+            } catch (error) {
+                message.textContent = error.message;
+                button.disabled = false;
+            }
+        }
+
+        document.getElementById('logoutLink').addEventListener(
+            'click',
+            async event => {
+                event.preventDefault();
+                await fetch('/api/auth/logout', { method: 'POST' });
+                window.location.href = 'index.html';
+            }
+        );
+
+        loadEntries();
+    </script>
+</body>
+</html>

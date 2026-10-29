@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Announcements - Chess Club Management System</title>
+
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+    <header>
+        <h1>Chess Club Management System</h1>
+        <p>Announcements</p>
+    </header>
+
+    <nav>
+        <a href="index.html">Dashboard</a>
+        <a href="players.html">Players</a>
+        <a href="coaches.html">Coaches</a>
+        <a href="tournaments.html">Tournaments</a>
+        <a href="classes.html">Classes</a>
+        <a href="class-participants.html">Participants</a>
+        <a href="announcements.html">Announcements</a>
+    </nav>
+
+    <div class="container">
+
+        <section class="welcome">
+            <h2>Club Announcements</h2>
+
+            <p>
+                View important announcements from the chess club administrators.
+            </p>
+        </section>
+
+        <section class="announcements-section">
+
+            <table id="announcementsTable">
+
+                <thead>
+                    <tr>
+                        <th>Announcement ID</th>
+                        <th>Type</th>
+                        <th>Date</th>
+                        <th>Poster</th>
+                        <th>Description</th>
+                        <th>Posted By</th>
+                    </tr>
+                </thead>
+
+                <tbody id="announcementsTableBody">
+
+                    <tr>
+                        <td colspan="6">
+                            Loading announcements...
+                        </td>
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </section>
+
+    </div>
+
+    <footer>
+        <p>Chess Club Management System © 2026</p>
+    </footer>
+
+
+    <script>
+
+        async function loadAnnouncements() {
+
+            try {
+
+                const response =
+                    await fetch('/api/announcements');
+
+                const announcements =
+                    await response.json();
+
+                const tableBody =
+                    document.getElementById(
+                        'announcementsTableBody'
+                    );
+
+                tableBody.innerHTML = '';
+
+                if (announcements.length === 0) {
+
+                    tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="6">
+                                No announcements found.
+                            </td>
+                        </tr>
+                    `;
+
+                    return;
+                }
+
+                announcements.forEach(announcement => {
+
+                    const row =
+                        document.createElement('tr');
+
+                    row.innerHTML = `
+                        <td>
+                            ${announcement.ANNOUNCEMENT_ID}
+                        </td>
+
+                        <td>
+                            ${announcement.ANNOUNCEMENT_TYPE}
+                        </td>
+
+                        <td>
+                            ${announcement.ANNOUNCEMENT_DATE}
+                        </td>
+
+                        <td>
+                            ${announcement.ANNOUNCEMENT_POSTER}
+                        </td>
+
+                        <td>
+                            ${announcement.ANNOUNCEMENT_DESCRIPTION}
+                        </td>
+
+                        <td>
+                            ${announcement.FIRST_NAME}
+                            ${announcement.LAST_NAME}
+                        </td>
+                    `;
+
+                    tableBody.appendChild(row);
+
+                });
+
+            } catch (error) {
+
+                console.error(
+                    'Error loading announcements:',
+                    error
+                );
+
+                document.getElementById(
+                    'announcementsTableBody'
+                ).innerHTML = `
+                    <tr>
+                        <td colspan="6">
+                            Failed to load announcements.
+                        </td>
+                    </tr>
+                `;
+
+            }
+
+        }
+
+        loadAnnouncements();
+
+    </script>
+
+</body>
+
+</html>
